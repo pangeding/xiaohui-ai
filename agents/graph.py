@@ -20,7 +20,7 @@ def build_agent_graph():
     # 添加条件边
     workflow.add_conditional_edges(
         source="recognize_intent",
-        condition=route_by_intent,
+        path=route_by_intent,
         mapping={
             "analyze_sleep": "analyze_sleep",
             "analyze_chat": "analyze_chat"
