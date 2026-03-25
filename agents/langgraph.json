@@ -3,7 +3,8 @@
     "agent": "./graph.py:agent_app"
   },
   "dependencies": [
-    "."
+    ".",
+    ".."
   ],
   "env": ".env"
 }

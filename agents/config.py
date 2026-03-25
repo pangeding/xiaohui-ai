@@ -55,6 +55,16 @@ class DeepSeekConfig(BaseSettings):
         env_file_encoding='utf-8',
         extra='ignore',
         case_sensitive=False,
+        json_schema_extra={
+            "example": {
+                "api_key": "sk-***",
+                "base_url": "https://api.deepseek.com",
+                "model": "deepseek-chat",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+                "timeout": 30.0
+            }
+        }
     )
     
     @field_validator('api_key')
@@ -80,17 +90,6 @@ class DeepSeekConfig(BaseSettings):
                 "\n获取 API Key: https://platform.deepseek.com/"
             )
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "api_key": "sk-***",
-                "base_url": "https://api.deepseek.com",
-                "model": "deepseek-chat",
-                "temperature": 0.7,
-                "max_tokens": 1000,
-                "timeout": 30.0
-            }
-        }
 
 
 class AgentConfig(BaseSettings):
@@ -120,10 +119,7 @@ class AgentConfig(BaseSettings):
         env_file_encoding='utf-8',
         extra='ignore',
         case_sensitive=False,
-    )
-    
-    class Config:
-        json_schema_extra = {
+        json_schema_extra={
             "example": {
                 "debug": False,
                 "log_level": "INFO",
@@ -134,6 +130,8 @@ class AgentConfig(BaseSettings):
                 }
             }
         }
+    )
+    
 
 
 @lru_cache()

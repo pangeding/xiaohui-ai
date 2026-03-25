@@ -17,9 +17,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
-[tool.setuptools.packages.find]
-include = ["agents*"]
-
 [tool.uv]
 dev-dependencies = [
     "black>=23.0.0",
