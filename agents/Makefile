@@ -22,7 +22,7 @@ install-dev:
 
 # Run the agent demo
 run-demo:
-	PYTHONPATH=.. uv run python demo.py
+	PYTHONPATH=$(shell pwd) uv run python demo.py
 
 # Format code
 format:

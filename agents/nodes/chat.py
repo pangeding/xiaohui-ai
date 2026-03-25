@@ -7,7 +7,13 @@ def analyze_chat(state: AgentState) -> AgentState:
     """聊天分析节点"""
     client = DeepSeekClient()
 
-    chat_content = state["input_data"]["content"]
+    # 处理不同的输入格式
+    input_data = state["input_data"]
+    if isinstance(input_data, dict):
+        chat_content = input_data.get("content", str(input_data))
+    else:
+        chat_content = str(input_data)
+    
     history = "\n".join([f"{m['role']}: {m['content']}" for m in state["messages"][-5:]]) if state["messages"] else "无"
 
     prompt = CHAT_ANALYSIS_PROMPT_TEMPLATE.format(

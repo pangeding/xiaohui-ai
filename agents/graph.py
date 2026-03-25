@@ -17,14 +17,10 @@ def build_agent_graph():
     # 设置入口点
     workflow.set_entry_point("recognize_intent")
 
-    # 添加条件边
+    # 添加条件边 - 修正 API 调用
     workflow.add_conditional_edges(
         source="recognize_intent",
-        path=route_by_intent,
-        mapping={
-            "analyze_sleep": "analyze_sleep",
-            "analyze_chat": "analyze_chat"
-        }
+        path=route_by_intent
     )
 
     # 专家节点执行完成后结束

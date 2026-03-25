@@ -38,7 +38,10 @@ run-demo:
 
 # Run the agent demo directly
 run-agent:
-	cd agents && uv run python demo.py
+	cd agents && PYTHONPATH=$(shell pwd):$${PYTHONPATH} uv run python demo.py
+
+dev-agent:
+	cd agents && uv run langgraph dev
 
 # Format code
 format: format-backend format-agents
