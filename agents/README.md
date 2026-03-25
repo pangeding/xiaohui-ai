@@ -23,8 +23,8 @@
 - 数学计算
 - 数据转换
 
-我看了一下睡眠的数据模型和具体数据，我现在想的是先起一个python的ai服务，有基本 REST Api接口，然后原始数据和分析数据落库，ai生成的建议和报告每天推送给用户。
-公司内部和别的后端比如java和前端，通过REST api进行交互。
+我看了一下睡眠的数据模型和具体数据，我现在想的是先起一个 python 的 ai 服务，有基本 REST Api 接口，然后原始数据和分析数据落库，ai 生成的建议和报告每天推送给用户。
+公司内部和别的后端比如 java 和前端，通过 REST api 进行交互。
 
 
 ### 1. 主要功能
@@ -34,9 +34,155 @@
 - **AI 做解读** - 像睡眠专家一样分析和建议
 - **人机协作** - 代码 + AI 各自发挥优势
 功能：
-1. 每日对每个用户分析原始数据，将中间数据落库，ai报告落库吧，每日推送ai睡眠报告给用户
+1. 每日对每个用户分析原始数据，将中间数据落库，ai 报告落库吧，每日推送 ai 睡眠报告给用户
 2. 趋势分析，
 3. 警告推送，
+
+### 1.1 LangGraph 架构设计
+
+#### 整体架构
+
+```
+┌─────────────────────────────────────────────────────┐
+│              REST API Layer (FastAPI)                │
+│  /api/v1/sleep/analyze  POST                         │
+│  /api/v1/sleep/trends   GET                          │
+│  /api/v1/sleep/alerts   GET                          │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│          LangGraph Workflow Engine                   │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  Code Nodes (computational/)                  │   │
+│  │  - validate_data                              │   │
+│  │  - clean_data                                 │   │
+│  │  - calculate_metrics                          │   │
+│  │  - detect_anomalies                           │   │
+│  │  - generate_labels                            │   │
+│  └──────────────────────────────────────────────┘   │
+│                        ↓                             │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  AI Nodes (ai_nodes/)                         │   │
+│  │  - deep_analysis                              │   │
+│  │  - generate_recommendations                   │   │
+│  │  - write_report                               │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│              Database Layer                          │
+│  - raw_sleep_data (原始数据)                         │
+│  - sleep_metrics (计算指标)                          │
+│  - sleep_anomalies (异常检测)                        │
+│  - sleep_reports (AI 报告)                            │
+│  - sleep_trends (趋势分析)                           │
+└─────────────────────────────────────────────────────┘
+```
+
+#### 目录结构
+
+```
+agents/
+├── computational/          # 代码计算节点 (纯 Python)
+│   ├── __init__.py
+│   ├── data_validator.py   # 数据验证与清洗
+│   ├── metrics_calculator.py # 指标计算
+│   ├── anomaly_detector.py   # 异常检测
+│   └── label_generator.py    # 标签生成
+├── ai_nodes/              # AI 分析节点 (LLM)
+│   ├── __init__.py
+│   ├── deep_analyst.py    # 深度分析
+│   ├── recommendation_engine.py # 建议生成
+│   └── report_writer.py   # 报告生成
+├── nodes/                 # 原有节点 (保留)
+│   ├── __init__.py
+│   ├── chat.py
+│   ├── intent.py
+│   └── sleep.py
+├── prompts/               # Prompt 模板
+│   ├── __init__.py
+│   ├── chat.py
+│   ├── intent.py
+│   ├── sleep.py
+│   ├── analysis.py        # 新增：AI 分析 prompt
+│   ├── recommendations.py # 新增：建议生成 prompt
+│   └── report.py          # 新增：报告生成 prompt
+├── graph.py               # LangGraph 工作流定义
+├── state.py               # 状态定义
+├── edges.py               # 边路由逻辑
+├── config.py              # 配置
+└── demo.py                # 演示脚本
+```
+
+#### State 设计
+
+```python
+class SleepAnalysisState(TypedDict):
+    # 输入数据
+    raw_data: Dict[str, Any]           # 原始睡眠数据
+    
+    # 代码计算结果 (computational nodes)
+    validated_data: Dict[str, Any]     # 验证后的数据
+    cleaned_data: List[Dict]           # 清洗后的数据
+    metrics: Dict[str, Any]            # 计算指标
+    anomalies: List[Dict]              # 异常列表
+    labels: List[str]                  # 标签列表
+    
+    # AI 分析结果 (ai_nodes)
+    deep_analysis: str                 # 深度分析报告
+    recommendations: List[Dict]        # 个性化建议
+    final_report: str                  # 完整报告
+    
+    # 元数据
+    analysis_type: str                 # "daily" | "trend" | "alert"
+    user_id: str                       # 用户 ID
+    date_range: Dict                   # 日期范围
+    tokens_used: int                   # Token 消耗
+```
+
+#### Graph 工作流
+
+```python
+from langgraph.graph import StateGraph, END
+
+def build_sleep_analysis_graph():
+    workflow = StateGraph(SleepAnalysisState)
+    
+    # === 代码计算节点 ===
+    workflow.add_node("validate_data", validate_data_node)
+    workflow.add_node("clean_data", clean_data_node)
+    workflow.add_node("calculate_metrics", calculate_metrics_node)
+    workflow.add_node("detect_anomalies", detect_anomalies_node)
+    workflow.add_node("generate_labels", generate_labels_node)
+    
+    # === AI 分析节点 ===
+    workflow.add_node("deep_analysis", deep_analysis_node)
+    workflow.add_node("generate_recommendations", generate_recommendations_node)
+    workflow.add_node("write_report", write_report_node)
+    
+    # === 工作流 ===
+    # 1. 数据验证 → 清洗 → 指标计算 → 异常检测 → 标签生成
+    workflow.add_edge("validate_data", "clean_data")
+    workflow.add_edge("clean_data", "calculate_metrics")
+    workflow.add_edge("calculate_metrics", "detect_anomalies")
+    workflow.add_edge("detect_anomalies", "generate_labels")
+    
+    # 2. 标签生成后进入 AI 分析
+    workflow.add_edge("generate_labels", "deep_analysis")
+    workflow.add_edge("deep_analysis", "generate_recommendations")
+    workflow.add_edge("generate_recommendations", "write_report")
+    
+    # 3. 结束
+    workflow.add_edge("write_report", END)
+    
+    # 设置入口点
+    workflow.set_entry_point("validate_data")
+    
+    return workflow.compile()
+```
+
+---
+
 ### 2. 全流程
 
 ```
@@ -44,9 +190,9 @@
                                               ↓
                                     [AI 节点] 深度分析
                                               ↓
-                                    [AI 节点] 报告生成
-                                              ↓
                                     [AI 节点] 建议生成
+                                              ↓
+                                    [AI 节点] 报告生成
 
 趋势分析
 
@@ -57,6 +203,7 @@
 
 #### 3.1 【代码节点】数据获取与验证
 **实现方式**: Python 函数
+**文件**: `computational/data_validator.py`
 ```python
 def validate_sleep_data(data: Dict) -> bool:
     required_fields = ['devID', 'day', 'sleepQualityScore']
@@ -65,6 +212,7 @@ def validate_sleep_data(data: Dict) -> bool:
 
 #### 3.2 【代码节点】数据清洗
 **实现方式**: Pandas/NumPy
+**文件**: `computational/metrics_calculator.py`
 ```python
 def clean_data(data: List[Dict]) -> List[Dict]:
     # 处理缺失值、异常值
@@ -77,6 +225,7 @@ def clean_data(data: List[Dict]) -> List[Dict]:
 
 #### 3.3 【代码节点】指标计算
 **实现方式**: 统计计算
+**文件**: `computational/metrics_calculator.py`
 ```python
 def calculate_metrics(data: List[Dict]) -> Dict:
     metrics = {
@@ -91,6 +240,7 @@ def calculate_metrics(data: List[Dict]) -> Dict:
 
 #### 3.4 【代码节点】异常检测
 **实现方式**: 规则引擎 + 统计方法
+**文件**: `computational/anomaly_detector.py`
 ```python
 def detect_anomalies(record: Dict) -> List[Dict]:
     anomalies = []
@@ -124,6 +274,7 @@ def detect_anomalies(record: Dict) -> List[Dict]:
 
 #### 3.5 【代码节点】标签生成
 **实现方式**: 规则匹配
+**文件**: `computational/label_generator.py`
 ```python
 def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
     labels = []
@@ -151,6 +302,8 @@ def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
 - 需要综合多个指标进行**因果推理**
 - 需要**医学知识**来判断严重性
 - 需要**类比推理**(类似案例的经验)
+
+**文件**: `ai_nodes/deep_analyst.py`
 
 **输入:**
 ```python
@@ -217,6 +370,8 @@ def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
 - 需要**个性化**(考虑用户生活方式)
 - 需要**行为心理学**(让建议可执行、可持续)
 
+**文件**: `ai_nodes/recommendation_engine.py`
+
 **Prompt 示例:**
 ```
 基于以上分析，请为该用户制定改善计划:
@@ -273,6 +428,8 @@ def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
 - 需要**共情**(理解用户感受)
 - 需要**风格调整**(对老人要用温和语气)
 
+**文件**: `ai_nodes/report_writer.py`
+
 **Prompt 示例:**
 ```
 请将以下分析结果整合成一份完整的睡眠报告:
@@ -290,7 +447,8 @@ def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
 - 避免恐吓，强调可控性
 - 多用比喻，少用术语
 ```
-#### 3.6 趋势追踪与报告
+
+#### 3.9 趋势追踪与报告
 - 7 天/30 天/90 天趋势分析
 - 改善进度追踪
 - 预警阈值设置与通知
@@ -328,43 +486,110 @@ def generate_labels(metrics: Dict, anomalies: List) -> List[str]:
 └─────────────────────────────────────────────┘
 ```
 
-#### 4.2 Agent 状态定义 (简化)
+#### 4.2 LangGraph 工作流实现
+
+**文件**: `graph.py`
 
 ```python
-class SleepAnalysisState(TypedDict):
-    raw_data: List[Dict]           # 原始数据
-    metrics: Dict                  # [代码计算] 指标
-    anomalies: List[Dict]          # [代码检测] 异常
-    labels: List[str]              # [代码生成] 标签
-    analysis: str                  # [AI 生成] 深度分析
-    recommendations: List[Dict]    # [AI 生成] 建议
-    report: str                    # [AI 生成] 完整报告
+from langgraph.graph import StateGraph, END
+from agents.state import SleepAnalysisState
+from agents.computational.data_validator import validate_data_node
+from agents.computational.metrics_calculator import calculate_metrics_node
+from agents.computational.anomaly_detector import detect_anomalies_node
+from agents.computational.label_generator import generate_labels_node
+from agents.ai_nodes.deep_analyst import deep_analysis_node
+from agents.ai_nodes.recommendation_engine import generate_recommendations_node
+from agents.ai_nodes.report_writer import write_report_node
+
+def build_sleep_analysis_graph():
+    """构建睡眠分析工作流"""
+    workflow = StateGraph(SleepAnalysisState)
+    
+    # === 添加代码计算节点 ===
+    workflow.add_node("validate_data", validate_data_node)
+    workflow.add_node("clean_data", clean_data_node)
+    workflow.add_node("calculate_metrics", calculate_metrics_node)
+    workflow.add_node("detect_anomalies", detect_anomalies_node)
+    workflow.add_node("generate_labels", generate_labels_node)
+    
+    # === 添加 AI 分析节点 ===
+    workflow.add_node("deep_analysis", deep_analysis_node)
+    workflow.add_node("generate_recommendations", generate_recommendations_node)
+    workflow.add_node("write_report", write_report_node)
+    
+    # === 定义工作流 ===
+    # 数据预处理流水线
+    workflow.add_edge("validate_data", "clean_data")
+    workflow.add_edge("clean_data", "calculate_metrics")
+    workflow.add_edge("calculate_metrics", "detect_anomalies")
+    workflow.add_edge("detect_anomalies", "generate_labels")
+    
+    # AI 分析流水线
+    workflow.add_edge("generate_labels", "deep_analysis")
+    workflow.add_edge("deep_analysis", "generate_recommendations")
+    workflow.add_edge("generate_recommendations", "write_report")
+    
+    # 结束
+    workflow.add_edge("write_report", END)
+    
+    # 设置入口点
+    workflow.set_entry_point("validate_data")
+    
+    return workflow.compile()
+
+# 全局实例
+sleep_analysis_app = build_sleep_analysis_graph()
 ```
 
-#### 4.3 工作流
+#### 4.3 节点实现示例
 
+**代码节点示例**: `computational/data_validator.py`
 ```python
-# 伪代码
-def analyze_sleep(state: SleepAnalysisState):
-    # === 代码部分 (90% 的工作) ===
-    validated = validate_data(state['raw_data'])
-    cleaned = clean_data(validated)
-    metrics = calculate_metrics(cleaned)
-    anomalies = detect_anomalies(cleaned)
-    labels = generate_labels(metrics, anomalies)
+from agents.state import SleepAnalysisState
+
+def validate_data_node(state: SleepAnalysisState) -> SleepAnalysisState:
+    """数据验证节点"""
+    raw_data = state['raw_data']
     
-    # === AI 部分 (10%,但最关键) ===
-    analysis = llm.analyze(metrics, anomalies, labels)
-    recommendations = llm.generate_recommendations(analysis)
-    report = llm.write_report(analysis, recommendations)
+    # 验证必填字段
+    required_fields = ['devID', 'day', 'sleepQualityScore', 'isEffective']
+    is_valid = all(field in raw_data for field in required_fields)
+    
+    if not is_valid or not raw_data.get('isEffective'):
+        raise ValueError("无效的数据格式")
+    
+    return {"validated_data": raw_data}
+```
+
+**AI 节点示例**: `ai_nodes/deep_analyst.py`
+```python
+from agents.state import SleepAnalysisState
+from agents.clients.deepseek import DeepSeekClient
+from agents.prompts.analysis import DEEP_ANALYSIS_PROMPT
+
+def deep_analysis_node(state: SleepAnalysisState) -> SleepAnalysisState:
+    """深度分析节点"""
+    client = DeepSeekClient()
+    
+    # 准备上下文
+    context = {
+        'metrics': state['metrics'],
+        'anomalies': state['anomalies'],
+        'labels': state['labels']
+    }
+    
+    prompt = DEEP_ANALYSIS_PROMPT.format(**context)
+    messages = [
+        {"role": "system", "content": "你是专业的睡眠医学专家。"},
+        {"role": "user", "content": prompt}
+    ]
+    
+    response = client.chat(messages)
+    analysis = response["choices"][0]["message"]["content"]
     
     return {
-        'metrics': metrics,
-        'anomalies': anomalies,
-        'labels': labels,
-        'analysis': analysis,
-        'recommendations': recommendations,
-        'report': report
+        "deep_analysis": analysis,
+        "tokens_used": response["usage"]["total_tokens"]
     }
 ```
 
@@ -456,3 +681,66 @@ def analyze_sleep(state: SleepAnalysisState):
 - #作息规律 (标准差<30min)
 - #深度睡眠好 (deepSleepPercent > 15%)
 - #快速入睡 (sleepOnsetLatency < 15min)
+
+### 6. 快速开始
+
+#### 6.1 安装依赖
+
+```bash
+pip install langgraph langchain langchain-openai pandas numpy
+```
+
+#### 6.2 配置环境变量
+
+```bash
+export DEEPSEEK_API_KEY="your_api_key_here"
+export DEEPSEEK_BASE_URL="https://api.deepseek.com"
+```
+
+#### 6.3 运行示例
+
+```bash
+python -m agents.demo
+```
+
+#### 6.4 调用睡眠分析
+
+```python
+from agents.graph import sleep_analysis_app
+
+# 准备数据
+initial_state = {
+    "raw_data": {...},  # 睡眠原始数据
+    "analysis_type": "daily",
+    "user_id": "user_123",
+    "date_range": {"start": "2026-03-24", "end": "2026-03-25"}
+}
+
+# 执行分析
+result = sleep_analysis_app.invoke(initial_state)
+
+# 获取结果
+print(result['deep_analysis'])        # AI 深度分析
+print(result['recommendations'])      # 个性化建议
+print(result['final_report'])         # 完整报告
+print(f"Token 消耗：{result['tokens_used']}")
+```
+
+### 7. 开发计划
+
+#### Phase 1: 基础架构 (本周)
+- [x] 设计 LangGraph 工作流
+- [ ] 实现代码计算节点 (validate, clean, calculate, detect, label)
+- [ ] 实现 AI 分析节点 (deep_analysis, recommendations, report)
+- [ ] 集成测试
+
+#### Phase 2: 数据持久化 (下周)
+- [ ] 数据库表设计
+- [ ] 落库逻辑实现
+- [ ] REST API 封装
+
+#### Phase 3: 高级功能 (后续)
+- [ ] 趋势分析 (7/30/90 天)
+- [ ] 预警系统
+- [ ] 批量处理
+- [ ] 性能优化
