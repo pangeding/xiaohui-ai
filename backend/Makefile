@@ -6,7 +6,6 @@
 # 使用 uv 安装依赖（自动创建虚拟环境）
 install:
 	@echo "正在使用 uv 安装依赖..."
-	uv venv || true
 	uv pip install -e .
 	@echo "✅ 依赖安装完成"
 	@echo ""
@@ -17,7 +16,6 @@ install:
 # 安装开发依赖
 install-dev:
 	@echo "正在使用 uv 安装开发依赖..."
-	uv venv || true
 	uv pip install -e ".[dev]"
 	@echo "✅ 开发依赖安装完成"
 	@echo ""
