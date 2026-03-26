@@ -2,7 +2,7 @@
 设备健康报告 API 路由
 """
 from fastapi import APIRouter, HTTPException, Query, Path
-from typing import Optional
+from typing import Optional, List
 from api.schemas import (
     DeviceHealthReportCreate,
     DeviceHealthReportUpdate,
@@ -76,7 +76,7 @@ async def get_by_biz_id(device_health_report_id: int = Path(..., description="�
     return DeviceHealthReportResponse.model_validate(report)
 
 
-@router.get("/device/{device_id}", response_model=list[DeviceHealthReportResponse], summary="根据设备 ID 获取报告列表")
+@router.get("/device/{device_id}", response_model=List[DeviceHealthReportResponse], summary="根据设备 ID 获取报告列表")
 async def get_reports_by_device(device_id: int = Path(..., description="设备 ID")):
     """
     根据设备 ID 获取所有报告
@@ -87,7 +87,7 @@ async def get_reports_by_device(device_id: int = Path(..., description="设备 I
     return [DeviceHealthReportResponse.model_validate(report) for report in reports]
 
 
-@router.get("/customer/{customer_id}", response_model=list[DeviceHealthReportResponse], summary="根据客户 ID 获取报告列表")
+@router.get("/customer/{customer_id}", response_model=List[DeviceHealthReportResponse], summary="根据客户 ID 获取报告列表")
 async def get_reports_by_customer(customer_id: int = Path(..., description="客户 ID")):
     """
     根据客户 ID 获取所有报告
@@ -98,7 +98,7 @@ async def get_reports_by_customer(customer_id: int = Path(..., description="客�
     return [DeviceHealthReportResponse.model_validate(report) for report in reports]
 
 
-@router.get("/date-range", response_model=list[DeviceHealthReportResponse], summary="根据日期范围获取报告")
+@router.get("/date-range", response_model=List[DeviceHealthReportResponse], summary="根据日期范围获取报告")
 async def get_reports_by_date_range(
     device_id: int = Query(..., description="设备 ID"),
     start_date: str = Query(..., description="开始日期"),

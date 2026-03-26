@@ -6,6 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from db import connect_db, close_db, init_tables
 from api.routes import router as device_health_report_router
+from dotenv import load_dotenv
+import os
+
+# 加载 .env 文件
+load_dotenv()
 
 # 定义生命周期事件
 @asynccontextmanager
@@ -27,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="小辉 AI 后端 API",
+    title="小汇 AI 后端 API",
     description="基于 FastAPI + Peewee + MySQL 的后端服务",
     version="1.0.0",
     lifespan=lifespan

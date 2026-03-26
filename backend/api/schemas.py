@@ -2,7 +2,7 @@
 Pydantic 模型定义 - 用于请求和响应验证
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 
@@ -56,7 +56,7 @@ class DeviceHealthReportResponse(DeviceHealthReportBase):
 class DeviceHealthReportListResponse(BaseModel):
     """设备健康报告列表响应模型"""
     
-    list: list[DeviceHealthReportResponse] = Field(description="报告列表")
+    items: List[DeviceHealthReportResponse] = Field(description="报告列表")
     total: int = Field(description="总数")
     page: int = Field(description="当前页码")
     page_size: int = Field(description="每页数量")

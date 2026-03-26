@@ -42,22 +42,22 @@ activate:
 # 启动服务（生产模式）
 run:
 	@echo "正在启动服务..."
-	python main.py
+	bash -c 'set -a; source .env; set +a; exec python main.py'
 
 # 启动服务（开发模式，自动重载）
 dev:
 	@echo "正在启动开发服务器..."
-	uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	bash -c 'set -a; source .env; set +a; exec uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload'
 
 # 运行测试
 test:
 	@echo "正在运行 CRUD 测试..."
-	python test_crud.py
+	@if [ -f .env ]; then set -a; source .env; set +a; fi; python test_crud.py
 
 # 运行 pytest 测试
 pytest:
 	@echo "正在运行 pytest 测试..."
-	pytest
+	@if [ -f .env ]; then set -a; source .env; set +a; fi; pytest
 
 # 代码检查 (Ruff)
 lint:
