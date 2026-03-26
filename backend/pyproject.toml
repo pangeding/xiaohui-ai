@@ -1,0 +1,103 @@
+[project]
+name = "xiaohui-ai-backend"
+version = "1.0.0"
+description = "小辉 AI 后端服务 - 基于 FastAPI + Peewee + MySQL"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Team", email = "your.email@example.com"}
+]
+keywords = ["fastapi", "peewee", "mysql", "api", "backend"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Web 框架
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+    
+    # ORM 和数据库
+    "peewee>=3.17.0",
+    "PyMySQL>=1.1.0",
+    "cryptography>=41.0.0",
+    
+    # 数据验证
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    
+    # 工具库
+    "python-dotenv>=1.0.0",
+    
+    # 可选：HTTP 客户端（用于测试）
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # 开发工具
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    
+    # 代码质量
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    
+    # 调试工具
+    "httpx>=0.25.0",  # 异步 HTTP 客户端（用于测试 API）
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/xiaohui-ai-backend"
+Documentation = "https://github.com/your-org/xiaohui-ai-backend#readme"
+Repository = "https://github.com/your-org/xiaohui-ai-backend"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["api", "db", "service"]
+
+# Ruff 配置 (代码检查)
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (black 会自动处理)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+# Mypy 配置 (类型检查)
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+strict_optional = true
+
+# Pytest 配置
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+asyncio_mode = "auto"
